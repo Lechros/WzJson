@@ -1,49 +1,66 @@
-﻿using WzComparerR2.WzLib;
+using Wz;
 
 namespace WzPipeline.Domains.SetItem;
 
-public class SetItemNode(Wz_Node node)
+public class SetItemNode(IWzNode node)
 {
-    public string Id => node.Text;
-    public string Name => node.Nodes["setItemName"].GetValue<string>();
+    public string Id => node.Name;
+    public string Name => node.Nodes["setItemName"].GetString()!;
 
     public IEnumerable<int> ItemIds
     {
         get
         {
             foreach (var subNode in node.Nodes["ItemID"].Nodes)
+            {
                 if (subNode.Nodes.Count == 0)
-                    yield return subNode.GetValue<int>();
-                else
-                    foreach (var partNode in subNode.Nodes)
-                        switch (partNode.Text)
-                        {
-                            case "representName":
-                            case "typeName":
-                            case "byGender":
-                                break;
-                            default:
-                                yield return partNode.GetValue<int>();
-                                break;
-                        }
+                {
+                    yield return subNode.GetInt32();
+                    continue;
+                }
+
+                foreach (var partNode in subNode.Nodes)
+                {
+                    switch (partNode.Name)
+                    {
+                        case "representName":
+                        case "typeName":
+                        case "byGender":
+                            break;
+                        default:
+                            yield return partNode.GetInt32();
+                            break;
+                    }
+                }
+            }
         }
     }
 
     public IEnumerable<EffectNode> Effects =>
         node.Nodes["Effect"].Nodes.Select(effectNode => new EffectNode(effectNode));
 
-    public bool JokerPossible => (node.Nodes["jokerPossible"]?.GetValue<int>() ?? 0) != 0;
-    public bool ZeroWeaponJokerPossible => (node.Nodes["zeroWeaponJokerPossible"]?.GetValue<int>() ?? 0) != 0;
+    public bool JokerPossible => (node.Nodes.Find("jokerPossible")?.GetInt32() ?? 0) != 0;
 
-    public class EffectNode(Wz_Node effectNode)
+    public bool ZeroWeaponJokerPossible =>
+        (node.Nodes.Find("zeroWeaponJokerPossible")?.GetInt32() ?? 0) != 0;
+
+    public class EffectNode(IWzNode effectNode)
     {
-        public int Index => int.Parse(effectNode.Text);
+        public int Index => int.Parse(effectNode.Name);
 
-        public IEnumerable<(string Type, int value)> Properties => effectNode.Nodes
-            .Where(n => n.Text != "Option")
-            .Select(n => (n.Text, n.GetValue<int>()));
+        public IEnumerable<(string Type, int value)> Properties
+        {
+            get
+            {
+                foreach (var property in effectNode.Nodes)
+                {
+                    if (property.Name != "Option" && property.TryConvertInt32(out var value))
+                        yield return (property.Name, value);
+                }
+            }
+        }
 
-        public IEnumerable<(int OptionCode, int Level)> Options => effectNode.Nodes["Option"]?.Nodes
-            .Select(n => (n.Nodes["option"].GetValue<int>(), n.Nodes["level"].GetValue<int>())) ?? [];
+        public IEnumerable<(int OptionCode, int Level)> Options => effectNode.Nodes.Find("Option")?.Nodes
+            .Select(n => (n.Nodes["option"].GetInt32(), n.Nodes["level"].GetInt32())) ?? [];
     }
 }

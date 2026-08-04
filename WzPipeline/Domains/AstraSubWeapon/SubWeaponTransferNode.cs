@@ -1,36 +1,30 @@
-﻿using WzComparerR2.WzLib;
+using Wz;
 using WzPipeline.Domains.Shared;
 
 namespace WzPipeline.Domains.AstraSubWeapon;
 
-public class SubWeaponTransferNode(Wz_Node node)
+public class SubWeaponTransferNode(IWzNode node)
 {
-    public Wz_Node Node => node;
-    public string Id => node.Text;
+    public IWzNode Node => node;
+    public string Id => node.Name;
     public int Job => int.Parse(Id);
 
     public IEnumerable<IEnumerable<int>> TargetIdGroups
     {
         get
         {
-            var targetNode = node.Nodes["target"] ?? throw DataFormatException.MissingRequiredNode(node, "target");
+            var targetNode = node.Nodes.Find("target") ?? throw DataFormatException.MissingRequiredNode(node, "target");
 
-            var shieldNode = targetNode.FindNodeByPath("shield");
-            if (shieldNode != null)
-            {
-                yield return shieldNode.Nodes.Select(n => int.Parse(n.Text));
-            }
+            var shieldNode = targetNode.FindNode("shield");
+            if (shieldNode is not null)
+                yield return shieldNode.Nodes.Select(n => int.Parse(n.Name));
 
-            var nonshieldNode = targetNode.FindNodeByPath("nonshield");
-            if (nonshieldNode != null)
-            {
-                yield return nonshieldNode.Nodes.Select(n => int.Parse(n.Text));
-            }
+            var nonshieldNode = targetNode.FindNode("nonshield");
+            if (nonshieldNode is not null)
+                yield return nonshieldNode.Nodes.Select(n => int.Parse(n.Name));
 
-            if (shieldNode == null && nonshieldNode == null)
-            {
-                yield return targetNode.Nodes.Select(n => int.Parse(n.Text));
-            }
+            if (shieldNode is null && nonshieldNode is null)
+                yield return targetNode.Nodes.Select(n => int.Parse(n.Name));
         }
     }
 }

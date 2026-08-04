@@ -1,27 +1,20 @@
 using System.Text.RegularExpressions;
 using Sprache;
-using WzComparerR2.WzLib;
+using Wz;
 
-namespace WzPipeline.Wz;
+namespace WzPipeline.MapleData;
 
-public class WzMatcher(string pattern)
+public sealed class WzMatcher(string pattern)
 {
     private readonly List<IPathSegmentSelector> selectors = CreateSelectors(pattern);
 
-    public static IEnumerable<Wz_Node> Match(Wz_Node node, string pattern)
-    {
-        return new WzMatcher(pattern).Match(node);
-    }
+    public static IEnumerable<IWzNode> Match(IWzNode node, string pattern) =>
+        new WzMatcher(pattern).Match(node);
 
-    public IEnumerable<Wz_Node> Match(Wz_Node node)
-    {
-        return Match(node, 0);
-    }
+    public IEnumerable<IWzNode> Match(IWzNode node) => Match(node, 0);
 
-    private IEnumerable<Wz_Node> Match(Wz_Node node, int depth)
+    private IEnumerable<IWzNode> Match(IWzNode node, int depth)
     {
-        node = EnsureExtracted(node);
-
         if (depth == selectors.Count)
         {
             yield return node;
@@ -29,58 +22,30 @@ public class WzMatcher(string pattern)
         }
 
         foreach (var child in selectors[depth].Select(node))
-        {
-            foreach (var result in Match(child, depth + 1))
-            {
-                yield return result;
-            }
-        }
-    }
-
-    private static Wz_Node EnsureExtracted(Wz_Node node)
-    {
-        var image = node.GetValue<Wz_Image?>();
-        if (image == null)
-        {
-            return node;
-        }
-
-        if (!image.TryExtractThreadSafe(out var exception))
-        {
-            throw exception;
-        }
-
-        return image.Node;
+        foreach (var result in Match(child, depth + 1))
+            yield return result;
     }
 
     private static List<IPathSegmentSelector> CreateSelectors(string pattern)
     {
         var tokens = Parsers.Tokens.Parse(pattern).ToList();
-
         if (tokens.Count == 0)
-        {
             throw new ArgumentException($@"Invalid pattern: {pattern}", nameof(pattern));
-        }
 
         var requiredLiteral = true;
         var selectors = new List<IPathSegmentSelector>(tokens.Count);
-
         foreach (var token in tokens)
         {
-            var selector = token switch
+            selectors.Add(token switch
             {
                 LiteralToken literal => new LiteralSegmentSelector(literal.Value, requiredLiteral),
                 BraceToken brace => new SetSegmentSelector(brace.Values),
                 GlobToken glob => GlobSegmentSelector.Create(glob.Pattern),
                 _ => throw new NotSupportedException($"Unknown token type: {token.GetType()}")
-            };
-
-            selectors.Add(selector);
+            });
 
             if (token is not LiteralToken)
-            {
                 requiredLiteral = false;
-            }
         }
 
         return selectors;
@@ -88,26 +53,23 @@ public class WzMatcher(string pattern)
 
     private interface IPathSegmentSelector
     {
-        IEnumerable<Wz_Node> Select(Wz_Node node);
+        IEnumerable<IWzNode> Select(IWzNode node);
     }
 
     private sealed class LiteralSegmentSelector(string value, bool required) : IPathSegmentSelector
     {
-        public IEnumerable<Wz_Node> Select(Wz_Node node)
+        public IEnumerable<IWzNode> Select(IWzNode node)
         {
-            var child = node.Nodes[value];
-
-            if (child != null)
+            var child = node.Nodes.Find(value);
+            if (child is not null)
             {
                 yield return child;
                 yield break;
             }
 
             if (required)
-            {
                 throw new InvalidOperationException(
-                    $"Required path segment '{value}' was not found under '{node.FullPathToFile}'.");
-            }
+                    $"Required path segment '{value}' was not found under '{node.GetFullPath()}'.");
         }
     }
 
@@ -115,18 +77,13 @@ public class WzMatcher(string pattern)
     {
         private readonly HashSet<string> values = [..values];
 
-        public IEnumerable<Wz_Node> Select(Wz_Node node)
-        {
-            return node.Nodes.Where(child => values.Contains(child.Text));
-        }
+        public IEnumerable<IWzNode> Select(IWzNode node) =>
+            node.Nodes.Where(child => values.Contains(child.Name));
     }
 
     private sealed class AllChildrenSegmentSelector : IPathSegmentSelector
     {
-        public IEnumerable<Wz_Node> Select(Wz_Node node)
-        {
-            return node.Nodes;
-        }
+        public IEnumerable<IWzNode> Select(IWzNode node) => node.Nodes;
     }
 
     private sealed class GlobSegmentSelector : IPathSegmentSelector
@@ -136,22 +93,14 @@ public class WzMatcher(string pattern)
         private GlobSegmentSelector(string pattern, bool compiled)
         {
             regex = new Regex(
-                "^" + Regex.Escape(pattern)
-                    .Replace(@"\*", ".*")
-                    .Replace(@"\?", ".") + "$",
+                "^" + Regex.Escape(pattern).Replace(@"\*", ".*").Replace(@"\?", ".") + "$",
                 compiled ? RegexOptions.Compiled : RegexOptions.None);
         }
 
-        public static IPathSegmentSelector Create(string pattern, bool compiled = false)
-        {
-            return pattern == "*"
-                ? new AllChildrenSegmentSelector()
-                : new GlobSegmentSelector(pattern, compiled);
-        }
+        public static IPathSegmentSelector Create(string pattern, bool compiled = false) =>
+            pattern == "*" ? new AllChildrenSegmentSelector() : new GlobSegmentSelector(pattern, compiled);
 
-        public IEnumerable<Wz_Node> Select(Wz_Node node)
-        {
-            return node.Nodes.Where(child => regex.IsMatch(child.Text));
-        }
+        public IEnumerable<IWzNode> Select(IWzNode node) =>
+            node.Nodes.Where(child => regex.IsMatch(child.Name));
     }
 }

@@ -13,6 +13,9 @@
         <PackageReference Include="FluentAssertions" Version="8.7.1" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
         <PackageReference Include="NUnit" Version="4.4.0" />
+        <PackageReference Include="NUnit3TestAdapter" Version="5.0.0">
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
         <PackageReference Include="coverlet.collector" Version="6.0.4">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
@@ -20,7 +23,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\WzComparerR2\WzComparerR2.WzLib\WzComparerR2.WzLib.csproj" />
       <ProjectReference Include="..\WzPipeline\WzPipeline.csproj" />
     </ItemGroup>
 

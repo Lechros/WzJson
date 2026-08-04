@@ -1,19 +1,19 @@
-﻿using WzComparerR2.WzLib;
+using Wz;
 
 namespace WzPipeline.Domains.Soul;
 
-public class SkillOptionNode(Wz_Node node)
+public class SkillOptionNode(IWzNode node)
 {
-    public string Id => node.Text;
-    public int SkillId => node.Nodes["skillId"].GetValue<int>();
-    public int ReqLevel => node.Nodes["reqLevel"].GetValue<int>();
-    public int IncTableId => node.Nodes["incTableID"]?.GetValue<int>() ?? 0;
+    public string Id => node.Name;
+    public int SkillId => node.Nodes["skillId"].GetInt32();
+    public int ReqLevel => node.Nodes["reqLevel"].GetInt32();
+    public int IncTableId => node.Nodes.Find("incTableID")?.GetInt32() ?? 0;
 
     public TempOptionNode[] TempOption => node.Nodes["tempOption"].Nodes.Select(n => new TempOptionNode(n)).ToArray();
 
-    public class TempOptionNode(Wz_Node node)
+    public class TempOptionNode(IWzNode node)
     {
-        public int Id => node.Nodes["id"].GetValue<int>();
-        public int Prob => node.Nodes["prob"].GetValue<int>();
+        public int Id => node.Nodes["id"].GetInt32();
+        public int Prob => node.Nodes["prob"].GetInt32();
     }
 }

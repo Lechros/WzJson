@@ -1,59 +1,43 @@
 using System.Drawing;
-using WzComparerR2;
-using WzComparerR2.Common;
-using WzComparerR2.WzLib;
-using WzPipeline.Wz;
+using Wz;
+using WzPipeline.MapleData;
 
 namespace WzPipeline.Domains.Shared.Icon;
 
-public class IconNode
+public sealed class IconNode
 {
-    private readonly Wz_Node node;
-    private readonly Wz_Node linkedSourceNode;
+    private readonly IWzNode node;
+    private readonly IWzNode sourceNode;
 
-    private IconNode(string id, Wz_Node node, Wz_Node linkedSourceNode)
+    private IconNode(string id, IWzNode node, IWzNode sourceNode)
     {
         Id = id;
         this.node = node;
-        this.linkedSourceNode = linkedSourceNode;
+        this.sourceNode = sourceNode;
     }
 
     public string Id { get; }
-
-    public Bitmap Image
-    {
-        get
-        {
-            var wzPng = linkedSourceNode.GetValue<Wz_Png>();
-            lock (wzPng.WzFile.ReadLock)
-            {
-                return wzPng.ExtractPng();
-            }
-        }
-    }
+    public Bitmap Image => sourceNode.GetCanvas().ExtractBitmap();
 
     public Point? Origin
     {
         get
         {
-            var originNode = node.Nodes["origin"];
-            if (originNode == null)
-            {
+            var originNode = node.Nodes.Find("origin");
+            if (originNode is null)
                 return null;
-            }
 
-            var vector = originNode.GetValue<Wz_Vector>();
+            var vector = originNode.GetVector();
             return new Point(vector.X, vector.Y);
         }
     }
 
-    public static IconNode Create(string id, Wz_Node node, GlobalFindNodeFunction findNode)
+    public static IconNode Create(string id, IWzNode node, GlobalFindNodeFunction findNode)
     {
         ArgumentNullException.ThrowIfNull(node);
-        node = node.HandleFullUol(findNode);
-        var linkedSourceNode = node.GetLinkedSourceNodeThreadSafe(findNode)
-                               ?? throw new InvalidOperationException(
-                                   $"Linked icon source was not found: {node.FullPath}");
-        return new IconNode(id, node, linkedSourceNode);
+        node = node.ResolveUol(findNode) ?? node;
+        var sourceNode = node.GetLinkedSourceNode(findNode) ??
+                         throw new InvalidOperationException($"Linked icon source was not found: {node.GetFullPath()}");
+        return new IconNode(id, node, sourceNode);
     }
 }

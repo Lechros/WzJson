@@ -1,12 +1,11 @@
 using System.Drawing;
 using System.Threading.Tasks.Dataflow;
-using WzComparerR2;
 using WzPipeline.Application.Core;
 using WzPipeline.Application.Exporters;
 using WzPipeline.Domains.Gear;
 using WzPipeline.Domains.Item;
 using WzPipeline.Domains.Shared.Icon;
-using WzPipeline.Wz;
+using WzPipeline.MapleData;
 
 namespace WzPipeline.Application.Pipelines;
 
@@ -46,7 +45,7 @@ public abstract class IconStreamPipeline<TNode> : IPipeline
         Id = id;
         var block = new TransformManyBlock<TNode, ImageArtifact>(node =>
         {
-            var icon = selector(node, (path, file) => tree.FindNode(path, file)!);
+            var icon = selector(node, tree.FindNode);
             return icon is null ? [] : [new ImageArtifact(icon.Id, icon.Image)];
         }, new ExecutionDataflowBlockOptions { CancellationToken = cancellationToken });
         Input = block;
@@ -69,7 +68,7 @@ public abstract class IconOriginPipeline<TNode> : IPipeline
         var data = new SortedDictionary<string, Point>();
         var input = new ActionBlock<TNode>(node =>
         {
-            var icon = selector(node, (path, file) => tree.FindNode(path, file)!);
+            var icon = selector(node, tree.FindNode);
             if (icon?.Origin is { } origin) data.TryAdd(icon.Id, origin);
         }, new ExecutionDataflowBlockOptions { CancellationToken = cancellationToken });
         Input = input;

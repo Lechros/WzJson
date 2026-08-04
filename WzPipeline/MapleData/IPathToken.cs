@@ -1,4 +1,4 @@
-﻿namespace WzPipeline.Wz;
+namespace WzPipeline.MapleData;
 
 internal interface IPathToken;
 

@@ -10,7 +10,7 @@ using WzPipeline.Domains.Gear;
 using WzPipeline.Domains.SetItem;
 using WzPipeline.Domains.Shared.ItemOption;
 using WzPipeline.Domains.Soul;
-using WzPipeline.Wz;
+using WzPipeline.MapleData;
 
 namespace WzPipeline.Application.Configuration;
 

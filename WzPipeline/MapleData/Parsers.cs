@@ -1,6 +1,6 @@
-﻿using Sprache;
+using Sprache;
 
-namespace WzPipeline.Wz;
+namespace WzPipeline.MapleData;
 
 internal static class Parsers
 {

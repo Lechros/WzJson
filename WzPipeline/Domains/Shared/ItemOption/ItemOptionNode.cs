@@ -1,22 +1,35 @@
-﻿using WzComparerR2.WzLib;
+using Wz;
+using WzPipeline.MapleData;
 
 namespace WzPipeline.Domains.Shared.ItemOption;
 
-public class ItemOptionNode(Wz_Node node)
+public class ItemOptionNode(IWzNode node)
 {
-    private Wz_Node InfoNode => node.Nodes["info"] ??
+    private IWzNode InfoNode => node.Nodes.Find("info") ??
                                 throw new InvalidDataException(
-                                    $"info node not found for item option {node.FullPath}");
+                                    $"info node not found for item option {node.GetFullPath()}");
 
-    private Wz_Node LevelNode => node.Nodes["level"] ??
+    private IWzNode LevelNode => node.Nodes.Find("level") ??
                                  throw new InvalidDataException(
-                                     $"level node not found for item option {node.FullPath}");
+                                     $"level node not found for item option {node.GetFullPath()}");
 
-    public string Id => node.Text.Split(".")[0].TrimStart('0');
-    public int? OptionType => InfoNode.Nodes["optionType"]?.GetValue<int>();
-    public int? ReqLevel => InfoNode.Nodes["reqLevel"]?.GetValue<int>();
-    public string String => InfoNode.Nodes["string"].GetValue<string>();
+    public string Id => node.Name.Split('.')[0].TrimStart('0');
+    public int? OptionType => InfoNode.Nodes.Find("optionType")?.GetInt32();
+    public int? ReqLevel => InfoNode.Nodes.Find("reqLevel")?.GetInt32();
+    public string String => InfoNode.Nodes["string"].GetString()!;
 
     public (int, Dictionary<string, string>)[] LevelOptions => LevelNode.Nodes.Select(level =>
-        (int.Parse(level.Text), level.Nodes.ToDictionary(n => n.Text, n => n.GetValue<string>()))).ToArray();
+        (int.Parse(level.Name), level.Nodes.ToDictionary(n => n.Name, GetLevelOptionValue))).ToArray();
+
+    private static string GetLevelOptionValue(IWzNode node)
+    {
+        if (node.TryConvertString(out var value))
+            return value;
+
+        if (node.Type == WzNodeType.Null)
+            return null!;
+
+        throw new InvalidDataException(
+            $"Item option value '{node.GetFullPath()}' of type '{node.Type}' is not scalar.");
+    }
 }

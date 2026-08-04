@@ -18,8 +18,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\WzComparerR2\WzComparerR2.Common\WzComparerR2.Common.csproj" />
-        <ProjectReference Include="..\WzComparerR2\WzComparerR2.WzLib\WzComparerR2.WzLib.csproj" />
+        <ProjectReference Include="..\Wz.NET\Wz.NET\Wz.NET.csproj" />
     </ItemGroup>
 
 </Project>

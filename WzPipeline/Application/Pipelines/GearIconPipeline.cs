@@ -2,7 +2,7 @@ using System.Threading.Tasks.Dataflow;
 using WzPipeline.Application.Core;
 using WzPipeline.Application.Exporters;
 using WzPipeline.Domains.Gear;
-using WzPipeline.Wz;
+using WzPipeline.MapleData;
 
 namespace WzPipeline.Application.Pipelines;
 
@@ -13,7 +13,7 @@ public sealed class GearIconPipeline : IPipeline
         var converter = new TransformManyBlock<GearNode, ImageArtifact>(node =>
         {
             if (node.Id is null) return [];
-            var icon = node.GetIconNode((path, file) => tree.FindNode(path, file)!);
+            var icon = node.GetIconNode(tree.FindNode);
             return icon is null ? [] : [new ImageArtifact(icon.Id, icon.Image)];
         }, new ExecutionDataflowBlockOptions
         {
